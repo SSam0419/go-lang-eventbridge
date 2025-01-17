@@ -12,35 +12,24 @@ import (
 	Event "go-lang-eventbridge/pkg/event"
 )
 
-type clientRecord struct{}
-
-type ServerListener struct {
-	identifier    string
-	clientRecords clientRecord
-}
-
-func NewServerListener(identifier string) *ServerListener {
-	return &ServerListener{
-		identifier: identifier,
-	}
+type ClientRecord struct {
 }
 
 type EventServer struct {
 	connection    net.Listener
-	listeners     []*ServerListener
-	clientRecords []clientRecord
+	clientRecords []ClientRecord
 	lock          sync.RWMutex
 	done          chan struct{}
 }
 
 func NewEventServer(port int) (*EventServer, error) {
 	conn, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+
 	if err != nil {
 		return nil, err
 	}
 	return &EventServer{
-		connection: conn,
-		listeners:  make([]*ServerListener, 0)}, nil
+		connection: conn}, nil
 }
 
 func (es *EventServer) Run(ctx context.Context) error {
@@ -102,10 +91,7 @@ func (es *EventServer) Run(ctx context.Context) error {
 
 }
 
-func (es *EventServer) AddListeners(identifier string) error {
-	newListener := NewServerListener(identifier)
-	es.lock.Lock()
-	es.listeners = append(es.listeners, newListener)
-	es.lock.Unlock()
+func (es *EventServer) RegisterClient() error {
+
 	return nil
 }
