@@ -12,8 +12,11 @@ import (
 	Event "go-lang-eventbridge/pkg/event"
 )
 
+type clientRecord struct{}
+
 type ServerListener struct {
-	identifier string
+	identifier    string
+	clientRecords clientRecord
 }
 
 func NewServerListener(identifier string) *ServerListener {
@@ -23,10 +26,11 @@ func NewServerListener(identifier string) *ServerListener {
 }
 
 type EventServer struct {
-	connection net.Listener
-	listeners  []*ServerListener
-	lock       sync.RWMutex
-	done       chan struct{}
+	connection    net.Listener
+	listeners     []*ServerListener
+	clientRecords []clientRecord
+	lock          sync.RWMutex
+	done          chan struct{}
 }
 
 func NewEventServer(port int) (*EventServer, error) {

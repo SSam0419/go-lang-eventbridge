@@ -8,7 +8,8 @@ import (
 )
 
 type EventClient struct {
-	conn net.Conn
+	serverConn     net.Conn
+	clientListener net.Listener
 }
 
 func NewEventClient(port int) *EventClient {
@@ -17,13 +18,13 @@ func NewEventClient(port int) *EventClient {
 		log.Println("Error while sending message to Event Server at port ", port)
 	}
 	return &EventClient{
-		conn: conn,
+		serverConn: conn,
 	}
 }
 
 func (ec *EventClient) SendMessage(topic string, payload string) error {
 	encoded := Event.EncodePayload(topic, payload)
-	_, err := ec.conn.Write(encoded)
+	_, err := ec.serverConn.Write(encoded)
 	if err != nil {
 		return fmt.Errorf("failed to write message: %w", err)
 	}
