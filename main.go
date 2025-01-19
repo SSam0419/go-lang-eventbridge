@@ -38,7 +38,7 @@ func main() {
 	)
 
 	// Smaller number to make it clearer
-	numConnections := 20
+	numConnections := 10
 
 	for i := 0; i < numConnections; i++ {
 		go func(id int) {
@@ -50,6 +50,7 @@ func main() {
 			log.Printf("Starting connection %d (In progress: %d)", id, currentInProgress)
 
 			client := EventClient.NewEventClient(SERVER_PORT)
+			go client.Accept(ctx)
 			err := client.SendMessage("topic la la ha", fmt.Sprintf("Message pkg %d\n", id))
 
 			latency := time.Since(connStart)

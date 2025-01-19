@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	protocol "go-lang-eventbridge/pkg/protocol"
 	"log"
 	"net"
 	"sync"
-	"time"
-
-	Event "go-lang-eventbridge/pkg/event"
 )
 
 type ClientRecord struct {
@@ -20,6 +18,8 @@ type EventServer struct {
 	clientRecords []ClientRecord
 	lock          sync.RWMutex
 	done          chan struct{}
+	// maximum number of connections allowed at a time
+	maxConnection int
 }
 
 func NewEventServer(port int) (*EventServer, error) {
@@ -29,14 +29,16 @@ func NewEventServer(port int) (*EventServer, error) {
 		return nil, err
 	}
 	return &EventServer{
-		connection: conn}, nil
+		connection:    conn,
+		maxConnection: 10,
+	}, nil
 }
 
 func (es *EventServer) Run(ctx context.Context) error {
 	defer es.connection.Close()
 
 	// Create a channel for accepting connections
-	connChan := make(chan net.Conn, 10)
+	connChan := make(chan net.Conn, es.maxConnection)
 
 	// Connection acceptor goroutine
 	go func() {
@@ -48,12 +50,8 @@ func (es *EventServer) Run(ctx context.Context) error {
 				}
 				return
 			}
-			go func() {
-				// simulate traffic
-				log.Println("the wait before")
-				time.Sleep(time.Second)
-				log.Println("the wait after")
 
+			go func() {
 				connChan <- conn
 			}()
 
@@ -62,7 +60,6 @@ func (es *EventServer) Run(ctx context.Context) error {
 
 	go func() {
 		for {
-			log.Println("iterating ..")
 			select {
 			case <-es.done:
 				return
@@ -72,7 +69,15 @@ func (es *EventServer) Run(ctx context.Context) error {
 			case conn := <-connChan:
 				go func(c net.Conn) {
 					defer c.Close()
-					message, err := Event.DecodeMessage(c)
+					from := c.RemoteAddr()
+					log.Println("client from  ", from, " sent an message")
+					// clientConn, err := net.Dial("tcp", from.String())
+					// if err != nil {
+					// 	log.Println("Error trying to send response back to client, ", err.Error())
+					// } else {
+					// 	Event.SendMessage("server response", "received msg from client", clientConn)
+					// }
+					message, err := protocol.DecodeMessageFromConn(c)
 					if err != nil {
 						log.Printf("Read error: %v", err)
 						return
