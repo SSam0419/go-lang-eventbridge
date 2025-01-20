@@ -65,3 +65,14 @@ func (ec *EventClient) SendMessage(topic string, payload string) error {
 
 	return nil
 }
+
+func (ec *EventClient) ListenTopic(topic string) error {
+	clientAddr := ec.clientListener.Addr().String()
+	encoded, _ := protocol.EncodeListenTopicRequest(topic, clientAddr)
+	_, err := ec.serverConn.Write(encoded)
+	if err != nil {
+		return fmt.Errorf("failed to write message: %w", err)
+	}
+
+	return nil
+}

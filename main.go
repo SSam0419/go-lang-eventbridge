@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	EventClient "go-lang-eventbridge/pkg/client"
 	EventServer "go-lang-eventbridge/pkg/server"
 	"log"
@@ -51,8 +50,8 @@ func main() {
 
 			client := EventClient.NewEventClient(SERVER_PORT)
 			go client.Accept(ctx)
-			err := client.SendMessage("topic la la ha", fmt.Sprintf("Message pkg %d\n", id))
-
+			// err := client.SendMessage("topic la la ha", fmt.Sprintf("Message pkg %d\n", id))
+			err := client.ListenTopic("topic la la ha")
 			latency := time.Since(connStart)
 			atomic.AddInt32(&inProgress, -1)
 

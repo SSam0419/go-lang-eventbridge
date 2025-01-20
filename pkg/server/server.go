@@ -10,14 +10,12 @@ import (
 	"sync"
 )
 
-type ClientRecord struct {
-}
-
 type EventServer struct {
-	connection    net.Listener
-	clientRecords []ClientRecord
-	lock          sync.RWMutex
-	done          chan struct{}
+	connection net.Listener
+	lock       sync.RWMutex
+	done       chan struct{}
+	//address of the clients listening on a topic
+	topicAudience map[string][]string
 	// maximum number of connections allowed at a time
 	maxConnection int
 }
@@ -31,6 +29,7 @@ func NewEventServer(port int) (*EventServer, error) {
 	return &EventServer{
 		connection:    conn,
 		maxConnection: 10,
+		topicAudience: make(map[string][]string),
 	}, nil
 }
 
@@ -71,18 +70,18 @@ func (es *EventServer) Run(ctx context.Context) error {
 					defer c.Close()
 					from := c.RemoteAddr()
 					log.Println("client from  ", from, " sent an message")
-					// clientConn, err := net.Dial("tcp", from.String())
-					// if err != nil {
-					// 	log.Println("Error trying to send response back to client, ", err.Error())
-					// } else {
-					// 	Event.SendMessage("server response", "received msg from client", clientConn)
-					// }
 					message, err := protocol.DecodeMessageFromConn(c)
 					if err != nil {
 						log.Printf("Read error: %v", err)
 						return
 					}
-					log.Printf("[%s] : %s", message.Topic, message.Payload)
+
+					log.Printf("Server received [%s] -> [%s] : %s", message.Command, message.Topic, message.Payload)
+
+					if message.Command == protocol.ListenTopicCommand {
+						go es.RegisterClient(message.ClientAddr, message.Topic)
+					}
+
 				}(conn)
 			}
 
@@ -96,7 +95,16 @@ func (es *EventServer) Run(ctx context.Context) error {
 
 }
 
-func (es *EventServer) RegisterClient() error {
+func (es *EventServer) RegisterClient(addr string, topic string) error {
+	log.Printf("client %s is registering to listen on topic %s \n", addr, topic)
+	es.lock.Lock()
+	es.topicAudience[topic] = append(es.topicAudience[topic], addr)
+	es.lock.Unlock()
 
+	log.Println("current topicAudience map -> ", es.topicAudience)
 	return nil
+}
+
+func (es *EventServer) Close() {
+	es.done <- struct{}{}
 }
